@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trainingsplan</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8;--accent:#1e90ff;--accent2:#00c2ff}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef4ff;--card:#fff;--line:#c9d9f2;--text:#0a1a33;--mute:#4d6a94}}
+:root[data-theme="dark"]{--bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px;max-width:600px;margin:auto}
+h1{font-size:24px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;font-style:italic;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mute);font-size:14px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+input{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px;width:100%}
+input:focus{outline:2px solid var(--accent)}
+button{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--mute);font-weight:600}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px}
+.tab{flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--mute)}
+.tab.on{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.row span{color:var(--mute);width:24px;font-size:13px}
+.last{color:var(--accent2);font-size:13px;margin:4px 0}
+.exh{display:flex;gap:8px;align-items:center}
+.u{position:relative;flex:1}.u input{padding-right:46px}.u em{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mute);font-style:normal;font-size:14px;pointer-events:none}
+.acc{cursor:pointer}.cnt{color:var(--mute);font-size:13px}.open{border-color:var(--accent)}
+.x{background:transparent;color:var(--mute);padding:6px 10px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<h1>Trainingsplan</h1>
+<div class="sub" id="sub"></div>
+<div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Plan regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
+<div id="app"></div>
+<script>
+const PASSWORT='Training2026'; // <- hier dein Passwort ändern
+const KEY='trainingsplan_v1';
+let S=null;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=S||{days:null,logs:{}};
+(S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
+let cur=0,openEx=null,ok=false;
+try{ok=localStorage.getItem(KEY+'_ok')==='1'}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){showWarn()}}
+function showWarn(){const w=document.getElementById('warn');if(w)w.style.display='block'}
+function wk(d){d=d||new Date();d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-n);const y=d.getUTCFullYear();return y+'-W'+String(Math.ceil(((d-Date.UTC(y,0,1))/864e5+1)/7)).padStart(2,'0')}
+const W=wk();
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function sets(w,d,e){return(((S.logs[w]||{})[d]||{})[e])||[]}
+function last(d,e){const ks=Object.keys(S.logs).filter(k=>k<W).sort().reverse();for(const k of ks){const s=sets(k,d,e).filter(x=>x.kg||x.reps);if(s.length)return{w:k,s}}return null}
+function setup(n){n=Math.min(7,Math.max(1,parseInt(n)||3));S.days=Array.from({length:n},(_,i)=>({name:'Tag '+(i+1),ex:[]}));cur=0;save();render()}
+function render(){
+ const A=document.getElementById('app');
+ if(!ok){document.getElementById('sub').textContent='Zugang mit Passwort';A.innerHTML='<div class="card"><input id="pw" type="password" placeholder="Passwort" autocomplete="off" onkeydown="if(event.key===\'Enter\')unlock()"><div class="row"><button onclick="unlock()">Freischalten</button></div><div class="last" id="pwerr" style="color:#ff6b6b"></div></div>';return}
+ document.getElementById('sub').textContent=S.days?('Aktuelle Woche: '+W):'Wie oft trainierst du pro Woche?';
+ if(!S.days){A.innerHTML='<div class="card"><input id="n" type="number" min="1" max="7" placeholder="Anzahl Trainingstage (1-7)" inputmode="numeric"><div class="row"><button onclick="setup(document.getElementById(\'n\').value)">Plan erstellen</button></div></div>'+BK;return}
+ const D=S.days[cur];
+ let h='<div class="tabs">'+S.days.map((d,i)=>'<button class="tab'+(i==cur?' on':'')+'" onclick="cur='+i+';openEx=null;render()">'+esc(d.name)+'</button>').join('')+'</div>';
+ h+='<div class="card"><input value="'+esc(D.name)+'" oninput="S.days[cur].name=this.value;save()" onchange="render()" aria-label="Name des Trainingstags"></div>';
+ D.ex.forEach((x,ei)=>{
+  if(openEx!==ei){const c=sets(W,cur,ei).filter(s=>s.kg||s.reps).length;h+='<div class="card acc" onclick="openEx='+ei+';render()"><div class="exh"><b style="flex:1">'+esc(x||'Übung '+(ei+1))+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
+  const cs=sets(W,cur,ei),L=last(cur,ei),n=Math.max(cs.length,1),m=(D.ms&&D.ms[ei])||[];
+  h+='<div class="card open"><div class="exh"><input value="'+esc(x)+'" oninput="S.days[cur].ex['+ei+']=this.value;save()" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
+  if(m.length)h+='<div class="last">Maschineneinstellungen</div>';
+  m.forEach((q,k)=>{h+='<div class="row"><input placeholder="Einstellung" value="'+esc(q.n||'')+'" oninput="msV('+ei+','+k+',\'n\',this.value)"><input placeholder="Wert" value="'+esc(q.v||'')+'" oninput="msV('+ei+','+k+',\'v\',this.value)" style="max-width:32%"><button class="x" onclick="msDel('+ei+','+k+')">✕</button></div>'});
+  if(m.length<3)h+='<div class="row"><button class="ghost" onclick="msAdd('+ei+')">+ Maschineneinstellung</button></div>';
+  h+='<div class="last" style="margin-top:12px">'+(L?'Letztes Mal ('+L.w+'): '+L.s.filter(s=>s.kg||s.reps).map(s=>(s.kg||'?')+' kg × '+(s.reps||'?')).join(' · '):'Noch keine Vorwerte')+'</div>';
+  for(let si=0;si<n;si++){const c=cs[si]||{},p=L&&L.s[si]||{};
+   h+='<div class="row"><span>'+(si+1)+'.</span><div class="u"><input type="number" inputmode="decimal" placeholder="'+(p.kg||'0')+'" value="'+esc(c.kg||'')+'" oninput="setV('+ei+','+si+',\'kg\',this.value)"><em>kg</em></div><div class="u"><input type="number" inputmode="numeric" placeholder="'+(p.reps||'0')+'" value="'+esc(c.reps||'')+'" oninput="setV('+ei+','+si+',\'reps\',this.value)"><em>Wdh</em></div>'+(n>1?'<button class="x" onclick="delSet('+ei+','+si+')">✕</button>':'')+'</div>'}
+  h+='<div class="row"><button class="ghost" onclick="addSet('+ei+')">+ Satz</button><button class="ghost" onclick="delEx('+ei+')">Übung löschen</button></div></div>'});
+ h+='<div class="card"><input id="ne" placeholder="Neue Übung (z. B. Bankdrücken)"><div class="row"><button onclick="addEx()">Übung hinzufügen</button></div></div>';
+ h+='<div class="row"><button class="ghost" onclick="reset()">Plan neu einrichten</button></div>'+BK;
+ A.innerHTML=h}
+function setV(e,s,f,v){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];while(a.length<=s)a.push({});a[s][f]=v;save()}
+function unlock(){if(document.getElementById('pw').value===PASSWORT){ok=true;try{localStorage.setItem(KEY+'_ok','1')}catch(e){}render()}else document.getElementById('pwerr').textContent='Passwort falsch.'}
+function msV(e,k,f,v){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];a[k]=a[k]||{};a[k][f]=v;save()}
+function msAdd(e){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];if(a.length<3)a.push({});save();render()}
+function msDel(e,k){S.days[cur].ms[e].splice(k,1);save();render()}
+function addSet(e){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];const t=Math.max(1,a.length)+1;while(a.length<t){const pv=a[a.length-1];a.push(pv&&pv.kg?{kg:pv.kg}:{})}save();render()}
+function addEx(){const v=document.getElementById('ne').value.trim();if(!v)return;S.days[cur].ex.push(v);openEx=S.days[cur].ex.length-1;save();render()}
+let dl=null;
+try{if(window.claude&&claude.use)claude.use('downloads').then(x=>{dl=x}).catch(()=>{})}catch(e){}
+const BK='<div class="row"><button class="ghost" onclick="exportData()">Plan herunterladen</button><button class="ghost" onclick="document.getElementById(\'imp\').click()">Plan importieren</button></div><input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">';
+async function exportData(){
+ const txt=JSON.stringify(S,null,1),name='trainingsplan-'+new Date().toISOString().slice(0,10)+'.json';
+ if(dl){try{await dl.save({filename:name,data:txt})}catch(e){if(!e||e.code!=='declined')alert('Speichern hat nicht geklappt.')}return}
+ try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){alert('Speichern hat nicht geklappt.')}
+}
+async function importData(inp){
+ const f=inp.files&&inp.files[0];if(!f)return;
+ try{
+  const o=JSON.parse(await f.text());
+  if(!o||typeof o.logs!=='object'||!(o.days===null||Array.isArray(o.days)))throw 0;
+  if(!confirm('Aktuellen Plan durch die Datei ersetzen?')){inp.value='';return}
+  S=o;(S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
+  cur=0;openEx=null;save();render();
+ }catch(e){alert('Die Datei konnte nicht gelesen werden. Bitte eine zuvor heruntergeladene Plan-Datei wählen.');inp.value=''}
+}
+function delSet(e,k){if(!confirm('Satz wirklich löschen?'))return;const a=((S.logs[W]||{})[cur]||{})[e];if(a)a.splice(k,1);save();render()}
+function delEx(i){if(!confirm('Übung löschen?'))return;S.days[cur].ex.splice(i,1);{const m=S.days[cur].ms||{},nm={};Object.keys(m).forEach(k=>{k=+k;if(k<i)nm[k]=m[k];else if(k>i)nm[k-1]=m[k]});S.days[cur].ms=nm;openEx=null}Object.values(S.logs).forEach(w=>{if(w[cur]){const o=w[cur],n={};Object.keys(o).forEach(k=>{k=+k;if(k<i)n[k]=o[k];else if(k>i)n[k-1]=o[k]});w[cur]=n}});save();render()}
+function reset(){if(!confirm('Plan und alle Eingaben löschen?'))return;S={days:null,logs:{}};save();render()}
+try{localStorage.setItem(KEY+'_t','1');localStorage.removeItem(KEY+'_t')}catch(e){showWarn()}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+render();
+</script>
+</body>
+</html>
