@@ -28,12 +28,15 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .exh{display:flex;gap:8px;align-items:center}
 .u{position:relative;flex:1}.u input{padding-right:46px}.u em{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mute);font-style:normal;font-size:14px;pointer-events:none}
 .acc{cursor:pointer}.cnt{color:var(--mute);font-size:13px}.open{border-color:var(--accent)}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.menu{position:relative}.mn{position:absolute;right:0;top:46px;background:var(--card);border:1px solid var(--line);border-radius:12px;min-width:220px;z-index:5;padding:6px}.mn button{display:block;width:100%;text-align:left;background:none;color:var(--text);text-transform:none;letter-spacing:0;font-weight:600}
+.dots{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.dots span{flex:0 0 auto;padding:6px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;color:var(--mute);cursor:pointer}.dots span.on{background:var(--accent);color:#fff;border-color:transparent}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.cd{padding:10px 0;border-radius:10px;font-size:15px;color:var(--mute)}.cd.tr{background:var(--accent);color:#fff;font-weight:700;cursor:pointer}.cd.sel{outline:2px solid var(--accent2)}.cd.td{border:1px solid var(--accent2)}.tabs{position:relative}
 .x{background:transparent;color:var(--mute);padding:6px 10px;border:1px solid var(--line)}
 </style>
 </head>
 <body>
-<h1>Trainingsplan</h1>
-<div class="sub" id="sub"></div>
+<div class="hd"><div><h1>Trainingsplan</h1><div class="sub" id="sub"></div></div><div class="menu" id="menuw" style="display:none"><button class="ghost" onclick="tm(event)" aria-label="Menü">☰</button><div class="mn" id="mn" style="display:none"><button onclick="go('plan')">🏋 Training</button><button onclick="go('cal')">📅 Kalender</button><button onclick="exportData()">⬇ Plan herunterladen</button><button onclick="document.getElementById('imp').click()">⬆ Plan importieren</button><button onclick="reset()">🔄 Plan neu einrichten</button></div></div></div>
+<input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">
 <div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Plan regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
 <div id="app"></div>
 <script>
@@ -43,7 +46,7 @@ let S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 S=S||{days:null,logs:{}};
 (S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
-let cur=0,openEx=null,ok=false;
+let cur=0,openEx=null,ok=false,vr=0,tx=0,ty=0,view='plan',cm=new Date(),selD=null;
 try{ok=localStorage.getItem(KEY+'_ok')==='1'}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){showWarn()}}
 function showWarn(){const w=document.getElementById('warn');if(w)w.style.display='block'}
@@ -56,29 +59,55 @@ function setup(n){n=Math.min(7,Math.max(1,parseInt(n)||3));S.days=Array.from({le
 function render(){
  const A=document.getElementById('app');
  if(!ok){document.getElementById('sub').textContent='Zugang mit Passwort';A.innerHTML='<div class="card"><input id="pw" type="password" placeholder="Passwort" autocomplete="off" onkeydown="if(event.key===\'Enter\')unlock()"><div class="row"><button onclick="unlock()">Freischalten</button></div><div class="last" id="pwerr" style="color:#ff6b6b"></div></div>';return}
+ document.getElementById('menuw').style.display='block';if(view==='cal'){renderCal(A);return}
  document.getElementById('sub').textContent=S.days?('Aktuelle Woche: '+W):'Wie oft trainierst du pro Woche?';
- if(!S.days){A.innerHTML='<div class="card"><input id="n" type="number" min="1" max="7" placeholder="Anzahl Trainingstage (1-7)" inputmode="numeric"><div class="row"><button onclick="setup(document.getElementById(\'n\').value)">Plan erstellen</button></div></div>'+BK;return}
+ if(!S.days){A.innerHTML='<div class="card"><input id="n" type="number" min="1" max="7" placeholder="Anzahl Trainingstage (1-7)" inputmode="numeric"><div class="row"><button onclick="setup(document.getElementById(\'n\').value)">Plan erstellen</button></div></div>';return}
  const D=S.days[cur];
  let h='<div class="tabs">'+S.days.map((d,i)=>'<button class="tab'+(i==cur?' on':'')+'" onclick="cur='+i+';openEx=null;render()">'+esc(d.name)+'</button>').join('')+'</div>';
  h+='<div class="card"><input value="'+esc(D.name)+'" oninput="S.days[cur].name=this.value;save()" onchange="render()" aria-label="Name des Trainingstags"></div>';
  D.ex.forEach((x,ei)=>{
-  if(openEx!==ei){const c=sets(W,cur,ei).filter(s=>s.kg||s.reps).length;h+='<div class="card acc" onclick="openEx='+ei+';render()"><div class="exh"><b style="flex:1">'+esc(x||'Übung '+(ei+1))+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
-  const cs=sets(W,cur,ei),L=last(cur,ei),n=Math.max(cs.length,1),m=(D.ms&&D.ms[ei])||[];
-  h+='<div class="card open"><div class="exh"><input value="'+esc(x)+'" oninput="S.days[cur].ex['+ei+']=this.value;save()" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
+  const al=(D.alt&&D.alt[ei])||[],names=[x,...al],kk=v=>ei+(v?'.'+v:'');
+  if(openEx!==ei){const c=names.reduce((t,_,v)=>t+sets(W,cur,kk(v)).filter(s=>s.kg||s.reps).length,0);h+='<div class="card acc" onclick="openEx='+ei+';vr=0;render()"><div class="exh"><b style="flex:1">'+esc(x||'Übung '+(ei+1))+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
+  const v=Math.min(vr,names.length-1),K=kk(v),q="'"+K+"'",cs=sets(W,cur,K),L=last(cur,K),n=Math.max(cs.length,1),m=(D.ms&&D.ms[K])||[];
+  h+='<div class="card open" ontouchstart="tx=event.touches[0].clientX;ty=event.touches[0].clientY" ontouchend="sw(event,'+names.length+')">';
+  h+='<div class="exh"><input value="'+esc(names[v])+'" oninput="setName('+ei+','+v+',this.value)" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
+  h+='<div class="dots">'+names.map((_,i)=>'<span class="'+(i==v?'on':'')+'" onclick="vr='+i+';render()">'+(i?'Alt '+i:'Haupt')+'</span>').join('')+'<span onclick="addAlt('+ei+')">+ Alternative</span></div>';
   if(m.length)h+='<div class="last">Maschineneinstellungen</div>';
-  m.forEach((q,k)=>{h+='<div class="row"><input placeholder="Einstellung" value="'+esc(q.n||'')+'" oninput="msV('+ei+','+k+',\'n\',this.value)"><input placeholder="Wert" value="'+esc(q.v||'')+'" oninput="msV('+ei+','+k+',\'v\',this.value)" style="max-width:32%"><button class="x" onclick="msDel('+ei+','+k+')">✕</button></div>'});
-  if(m.length<3)h+='<div class="row"><button class="ghost" onclick="msAdd('+ei+')">+ Maschineneinstellung</button></div>';
+  m.forEach((z,k)=>{h+='<div class="row"><input placeholder="Einstellung" value="'+esc(z.n||'')+'" oninput="msV('+q+','+k+',\'n\',this.value)"><input placeholder="Wert" value="'+esc(z.v||'')+'" oninput="msV('+q+','+k+',\'v\',this.value)" style="max-width:32%"><button class="x" onclick="msDel('+q+','+k+')">✕</button></div>'});
+  h+='<div class="row"><button class="ghost" onclick="msAdd('+q+')">+ Maschineneinstellung</button></div>';
   h+='<div class="last" style="margin-top:12px">'+(L?'Letztes Mal ('+L.w+'): '+L.s.filter(s=>s.kg||s.reps).map(s=>(s.kg||'?')+' kg × '+(s.reps||'?')).join(' · '):'Noch keine Vorwerte')+'</div>';
   for(let si=0;si<n;si++){const c=cs[si]||{},p=L&&L.s[si]||{};
-   h+='<div class="row"><span>'+(si+1)+'.</span><div class="u"><input type="number" inputmode="decimal" placeholder="'+(p.kg||'0')+'" value="'+esc(c.kg||'')+'" oninput="setV('+ei+','+si+',\'kg\',this.value)"><em>kg</em></div><div class="u"><input type="number" inputmode="numeric" placeholder="'+(p.reps||'0')+'" value="'+esc(c.reps||'')+'" oninput="setV('+ei+','+si+',\'reps\',this.value)"><em>Wdh</em></div>'+(n>1?'<button class="x" onclick="delSet('+ei+','+si+')">✕</button>':'')+'</div>'}
-  h+='<div class="row"><button class="ghost" onclick="addSet('+ei+')">+ Satz</button><button class="ghost" onclick="delEx('+ei+')">Übung löschen</button></div></div>'});
+   h+='<div class="row"><span>'+(si+1)+'.</span><div class="u"><input type="number" inputmode="decimal" placeholder="'+(p.kg||'0')+'" value="'+esc(c.kg||'')+'" oninput="setV('+q+','+si+',\'kg\',this.value)"><em>kg</em></div><div class="u"><input type="number" inputmode="numeric" placeholder="'+(p.reps||'0')+'" value="'+esc(c.reps||'')+'" oninput="setV('+q+','+si+',\'reps\',this.value)"><em>Wdh</em></div>'+(n>1?'<button class="x" onclick="delSet('+q+','+si+')">✕</button>':'')+'</div>'}
+  h+='<div class="row"><button class="ghost" onclick="addSet('+q+')">+ Satz</button><button class="ghost" onclick="'+(v?'delAlt('+ei+','+v+')':'delEx('+ei+')')+'">'+(v?'Alternative löschen':'Übung löschen')+'</button></div></div>'});
  h+='<div class="card"><input id="ne" placeholder="Neue Übung (z. B. Bankdrücken)"><div class="row"><button onclick="addEx()">Übung hinzufügen</button></div></div>';
- h+='<div class="row"><button class="ghost" onclick="reset()">Plan neu einrichten</button></div>'+BK;
- A.innerHTML=h}
-function setV(e,s,f,v){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];while(a.length<=s)a.push({});a[s][f]=v;save()}
+ 
+ A.innerHTML=h;const t=A.querySelector('.tab.on'),bar=A.querySelector('.tabs');if(t&&bar)bar.scrollLeft=t.offsetLeft-bar.clientWidth/2+t.offsetWidth/2}
+function setV(e,s,f,v){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];while(a.length<=s)a.push({});a[s][f]=v;mark();save()}
 function unlock(){if(document.getElementById('pw').value===PASSWORT){ok=true;try{localStorage.setItem(KEY+'_ok','1')}catch(e){}render()}else document.getElementById('pwerr').textContent='Passwort falsch.'}
+function ds(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function mark(){const t=ds();S.dates=S.dates||{};Object.keys(S.dates).forEach(k=>{if(k!==t&&S.dates[k]===cur&&wk(new Date(k+'T12:00:00'))===W)delete S.dates[k]});S.dates[t]=cur}
+function sw(ev,n){const t=ev.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;vr=Math.max(0,Math.min(n-1,vr+(dx<0?1:-1)));render()}
+function setName(ei,v,val){if(v==0)S.days[cur].ex[ei]=val;else S.days[cur].alt[ei][v-1]=val;save()}
+function addAlt(ei){const D=S.days[cur];D.alt=D.alt||{};const a=D.alt[ei]=D.alt[ei]||[];a.push('Alternative '+(a.length+1));vr=a.length;save();render()}
+function delAlt(ei,v){if(!confirm('Alternative wirklich löschen?'))return;const D=S.days[cur];D.alt[ei].splice(v-1,1);
+ const fx=o=>{const n={};Object.keys(o||{}).forEach(k=>{const[p,q]=k.split('.');if(+p===ei&&q!==undefined){if(+q===v)return;if(+q>v){n[p+'.'+(q-1)]=o[k];return}}n[k]=o[k]});return n};
+ D.ms=fx(D.ms);Object.values(S.logs).forEach(w=>{if(w[cur])w[cur]=fx(w[cur])});vr=Math.max(0,v-1);save();render()}
+function tm(e){e.stopPropagation();const m=document.getElementById('mn');m.style.display=m.style.display==='block'?'none':'block'}
+document.addEventListener('click',()=>{document.getElementById('mn').style.display='none'});
+function go(v){view=v;openEx=null;render()}
+function cmv(d){cm=new Date(cm.getFullYear(),cm.getMonth()+d,1);selD=null;render()}
+function renderCal(A){
+ document.getElementById('sub').textContent='Kalender';
+ const y=cm.getFullYear(),m=cm.getMonth(),f=(new Date(y,m,1).getDay()+6)%7,nd=new Date(y,m+1,0).getDate(),D=S.dates||{},pd=x=>String(x).padStart(2,'0');
+ let h='<div class="card"><div class="exh"><button class="x" onclick="cmv(-1)">‹</button><b style="flex:1;text-align:center">'+cm.toLocaleDateString('de-DE',{month:'long',year:'numeric'})+'</b><button class="x" onclick="cmv(1)">›</button></div><div class="cal" style="margin-top:10px">'+['Mo','Di','Mi','Do','Fr','Sa','So'].map(t=>'<div class="cnt">'+t+'</div>').join('')+'<div></div>'.repeat(f);
+ for(let d=1;d<=nd;d++){const k=y+'-'+pd(m+1)+'-'+pd(d),t=D[k]!==undefined;h+='<div class="cd'+(t?' tr':'')+(k===selD?' sel':'')+(k===ds()?' td':'')+'"'+(t?' onclick="selD=\''+k+'\';render()"':'')+'>'+d+'</div>'}
+ h+='</div></div>';
+ if(selD&&D[selD]!==undefined){const di=D[selD],dy=S.days&&S.days[di],w=wk(new Date(selD+'T12:00:00'));h+='<div class="card"><b>'+esc(dy?dy.name:'Training')+'</b> · '+selD.split('-').reverse().join('.');
+  (dy?dy.ex:[]).forEach((x,ei)=>{[x,...((dy.alt&&dy.alt[ei])||[])].forEach((nm,v)=>{const r=sets(w,di,ei+(v?'.'+v:'')).filter(z=>z.kg||z.reps);if(r.length)h+='<div class="last"><b>'+esc(nm)+'</b><br>'+r.map((z,i)=>(i+1)+'. '+(z.kg||'?')+' kg × '+(z.reps||'?')).join(' · ')+'</div>'})});h+='</div>'}
+ else h+='<div class="sub">Tippe auf einen markierten Tag.</div>';
+ A.innerHTML=h}
 function msV(e,k,f,v){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];a[k]=a[k]||{};a[k][f]=v;save()}
-function msAdd(e){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];if(a.length<3)a.push({});save();render()}
+function msAdd(e){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];a.push({});save();render()}
 function msDel(e,k){S.days[cur].ms[e].splice(k,1);save();render()}
 function addSet(e){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];const t=Math.max(1,a.length)+1;while(a.length<t){const pv=a[a.length-1];a.push(pv&&pv.kg?{kg:pv.kg}:{})}save();render()}
 function addEx(){const v=document.getElementById('ne').value.trim();if(!v)return;S.days[cur].ex.push(v);openEx=S.days[cur].ex.length-1;save();render()}
@@ -97,12 +126,14 @@ async function importData(inp){
   if(!o||typeof o.logs!=='object'||!(o.days===null||Array.isArray(o.days)))throw 0;
   if(!confirm('Aktuellen Plan durch die Datei ersetzen?')){inp.value='';return}
   S=o;(S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
-  cur=0;openEx=null;save();render();
+  cur=0;openEx=null;view='plan';inp.value='';save();render();
  }catch(e){alert('Die Datei konnte nicht gelesen werden. Bitte eine zuvor heruntergeladene Plan-Datei wählen.');inp.value=''}
 }
 function delSet(e,k){if(!confirm('Satz wirklich löschen?'))return;const a=((S.logs[W]||{})[cur]||{})[e];if(a)a.splice(k,1);save();render()}
-function delEx(i){if(!confirm('Übung löschen?'))return;S.days[cur].ex.splice(i,1);{const m=S.days[cur].ms||{},nm={};Object.keys(m).forEach(k=>{k=+k;if(k<i)nm[k]=m[k];else if(k>i)nm[k-1]=m[k]});S.days[cur].ms=nm;openEx=null}Object.values(S.logs).forEach(w=>{if(w[cur]){const o=w[cur],n={};Object.keys(o).forEach(k=>{k=+k;if(k<i)n[k]=o[k];else if(k>i)n[k-1]=o[k]});w[cur]=n}});save();render()}
-function reset(){if(!confirm('Plan und alle Eingaben löschen?'))return;S={days:null,logs:{}};save();render()}
+function delEx(i){if(!confirm('Übung löschen?'))return;const D=S.days[cur];D.ex.splice(i,1);
+ const rk=o=>{const n={};Object.keys(o||{}).forEach(k=>{const[p,q]=k.split('.'),a=+p;if(a===i)return;const b=a>i?a-1:a;n[q===undefined?b:b+'.'+q]=o[k]});return n};
+ D.ms=rk(D.ms);D.alt=rk(D.alt);Object.values(S.logs).forEach(w=>{if(w[cur])w[cur]=rk(w[cur])});openEx=null;save();render()}
+function reset(){if(!confirm('Plan und alle Eingaben löschen?'))return;S={days:null,logs:{}};view='plan';save();render()}
 try{localStorage.setItem(KEY+'_t','1');localStorage.removeItem(KEY+'_t')}catch(e){showWarn()}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 render();
