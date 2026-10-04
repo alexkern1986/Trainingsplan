@@ -31,6 +31,7 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.menu{position:relative}.mn{position:absolute;right:0;top:46px;background:var(--card);border:1px solid var(--line);border-radius:12px;min-width:220px;z-index:5;padding:6px}.mn button{display:block;width:100%;text-align:left;background:none;color:var(--text);text-transform:none;letter-spacing:0;font-weight:600}
 .dots{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.dots span{flex:0 0 auto;padding:6px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;color:var(--mute);cursor:pointer}.dots span.on{background:var(--accent);color:#fff;border-color:transparent}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.cd{padding:10px 0;border-radius:10px;font-size:15px;color:var(--mute)}.cd.tr{background:var(--accent);color:#fff;font-weight:700;cursor:pointer}.cd.sel{outline:2px solid var(--accent2)}.cd.td{border:1px solid var(--accent2)}.tabs{position:relative}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9}.cd{cursor:pointer}.cd.pl{background:transparent;color:var(--accent2);border:1px dashed var(--accent2)}
 .x{background:transparent;color:var(--mute);padding:6px 10px;border:1px solid var(--line)}
 </style>
 </head>
@@ -39,6 +40,7 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 <input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">
 <div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Plan regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
 <div id="app"></div>
+<div id="toast"></div>
 <script>
 const PASSWORT='Training2026'; // <- hier dein Passwort ändern
 const KEY='trainingsplan_v1';
@@ -46,7 +48,7 @@ let S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 S=S||{days:null,logs:{}};
 (S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
-let cur=0,openEx=null,ok=false,vr=0,tx=0,ty=0,view='plan',cm=new Date(),selD=null;
+let cur=0,openEx=null,ok=false,vr=0,tx=0,ty=0,view='plan',cm=new Date(),selD=null,sc=0,svOpen=false;
 try{ok=localStorage.getItem(KEY+'_ok')==='1'}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){showWarn()}}
 function showWarn(){const w=document.getElementById('warn');if(w)w.style.display='block'}
@@ -67,10 +69,10 @@ function render(){
  h+='<div class="card"><input value="'+esc(D.name)+'" oninput="S.days[cur].name=this.value;save()" onchange="render()" aria-label="Name des Trainingstags"></div>';
  D.ex.forEach((x,ei)=>{
   const al=(D.alt&&D.alt[ei])||[],names=[x,...al],kk=v=>ei+(v?'.'+v:'');
-  if(openEx!==ei){const c=names.reduce((t,_,v)=>t+sets(W,cur,kk(v)).filter(s=>s.kg||s.reps).length,0);h+='<div class="card acc" onclick="openEx='+ei+';vr=0;render()"><div class="exh"><b style="flex:1">'+esc(x||'Übung '+(ei+1))+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
+  if(openEx!==ei){const c=names.reduce((t,_,v)=>t+sets(W,cur,kk(v)).filter(s=>s.kg||s.reps).length,0);h+='<div class="card acc" onclick="openEx='+ei+';vr=0;sc=1;render()"><div class="exh"><b style="flex:1">'+(ei+1)+'. '+esc(x||'Übung')+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
   const v=Math.min(vr,names.length-1),K=kk(v),q="'"+K+"'",cs=sets(W,cur,K),L=last(cur,K),n=Math.max(cs.length,1),m=(D.ms&&D.ms[K])||[];
-  h+='<div class="card open" ontouchstart="tx=event.touches[0].clientX;ty=event.touches[0].clientY" ontouchend="sw(event,'+names.length+')">';
-  h+='<div class="exh"><input value="'+esc(names[v])+'" oninput="setName('+ei+','+v+',this.value)" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
+  h+='<div class="card open" ontouchstart="tx=event.touches[0].clientX;ty=event.touches[0].clientY" ontouchend="sw(event,'+names.length+')" onfocusin="fx(event)">';
+  h+='<div class="exh"><span class="cnt">'+(ei+1)+'.</span><input value="'+esc(names[v])+'" oninput="setName('+ei+','+v+',this.value)" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
   h+='<div class="dots">'+names.map((_,i)=>'<span class="'+(i==v?'on':'')+'" onclick="vr='+i+';render()">'+(i?'Alt '+i:'Haupt')+'</span>').join('')+'<span onclick="addAlt('+ei+')">+ Alternative</span></div>';
   if(m.length)h+='<div class="last">Maschineneinstellungen</div>';
   m.forEach((z,k)=>{h+='<div class="row"><input placeholder="Einstellung" value="'+esc(z.n||'')+'" oninput="msV('+q+','+k+',\'n\',this.value)"><input placeholder="Wert" value="'+esc(z.v||'')+'" oninput="msV('+q+','+k+',\'v\',this.value)" style="max-width:32%"><button class="x" onclick="msDel('+q+','+k+')">✕</button></div>'});
@@ -81,11 +83,17 @@ function render(){
   h+='<div class="row"><button class="ghost" onclick="addSet('+q+')">+ Satz</button><button class="ghost" onclick="'+(v?'delAlt('+ei+','+v+')':'delEx('+ei+')')+'">'+(v?'Alternative löschen':'Übung löschen')+'</button></div></div>'});
  h+='<div class="card"><input id="ne" placeholder="Neue Übung (z. B. Bankdrücken)"><div class="row"><button onclick="addEx()">Übung hinzufügen</button></div></div>';
  
- A.innerHTML=h;const t=A.querySelector('.tab.on'),bar=A.querySelector('.tabs');if(t&&bar)bar.scrollLeft=t.offsetLeft-bar.clientWidth/2+t.offsetWidth/2}
-function setV(e,s,f,v){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];while(a.length<=s)a.push({});a[s][f]=v;mark();save()}
+ h+='<div class="card"><button style="width:100%" onclick="svOpen=!svOpen;render()">✓ Trainingstag speichern</button>'+(svOpen?'<div class="row"><button class="ghost" style="flex:1" onclick="saveDate(ds())">Heute speichern</button><button class="ghost" style="flex:1" onclick="go(\'pick\')">Kalender</button></div>':'')+'</div>'+(openEx!==null?'<div style="height:55vh"></div>':'');
+ A.innerHTML=h;const t=A.querySelector('.tab.on'),bar=A.querySelector('.tabs');if(t&&bar)bar.scrollLeft=t.offsetLeft-bar.clientWidth/2+t.offsetWidth/2;if(sc){sc=0;const o=A.querySelector('.card.open');if(o)window.scrollTo(0,o.getBoundingClientRect().top+window.scrollY-10)}}
+function setV(e,s,f,v){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];while(a.length<=s)a.push({});a[s][f]=v;save()}
 function unlock(){if(document.getElementById('pw').value===PASSWORT){ok=true;try{localStorage.setItem(KEY+'_ok','1')}catch(e){}render()}else document.getElementById('pwerr').textContent='Passwort falsch.'}
 function ds(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function mark(){const t=ds();S.dates=S.dates||{};Object.keys(S.dates).forEach(k=>{if(k!==t&&S.dates[k]===cur&&wk(new Date(k+'T12:00:00'))===W)delete S.dates[k]});S.dates[t]=cur}
+function ent(k){const v=(S.dates||{})[k];if(v===undefined||v===null)return null;return typeof v==='object'?v:{d:v,w:wk(new Date(k+'T12:00:00'))}}
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>{e.style.display='none'},2200)}
+function saveDate(k){S.dates=S.dates||{};Object.keys(S.dates).forEach(x=>{const e=ent(x);if(x!==k&&e&&e.d===cur&&e.w===W)delete S.dates[x]});S.dates[k]={d:cur,w:W};save();svOpen=false;toast(k===ds()?'Für heute gespeichert ✓':'Gespeichert am '+k.split('-').reverse().join('.')+' ✓');render()}
+function pickD(k){const e=ent(k);if(e&&!(e.d===cur&&e.w===W)&&!confirm('Für diesen Tag ist schon ein Training gespeichert. Ersetzen?'))return;saveDate(k);go('plan')}
+function fx(ev){setTimeout(()=>{const o=document.querySelector('.card.open'),i=ev.target;if(!o||!i||!i.getBoundingClientRect)return;const vh=window.visualViewport?visualViewport.height:innerHeight,t=o.getBoundingClientRect().top+scrollY-10,ib=i.getBoundingClientRect().bottom+scrollY+16;scrollTo(0,Math.max(0,Math.max(t,ib-vh)))},350)}
+window.addEventListener('popstate',e=>{view=(e.state&&e.state.v)||'plan';openEx=null;render()})
 function sw(ev,n){const t=ev.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;vr=Math.max(0,Math.min(n-1,vr+(dx<0?1:-1)));render()}
 function setName(ei,v,val){if(v==0)S.days[cur].ex[ei]=val;else S.days[cur].alt[ei][v-1]=val;save()}
 function addAlt(ei){const D=S.days[cur];D.alt=D.alt||{};const a=D.alt[ei]=D.alt[ei]||[];a.push('Alternative '+(a.length+1));vr=a.length;save();render()}
@@ -94,23 +102,25 @@ function delAlt(ei,v){if(!confirm('Alternative wirklich löschen?'))return;const
  D.ms=fx(D.ms);Object.values(S.logs).forEach(w=>{if(w[cur])w[cur]=fx(w[cur])});vr=Math.max(0,v-1);save();render()}
 function tm(e){e.stopPropagation();const m=document.getElementById('mn');m.style.display=m.style.display==='block'?'none':'block'}
 document.addEventListener('click',()=>{document.getElementById('mn').style.display='none'});
-function go(v){view=v;openEx=null;render()}
+function go(v){openEx=null;if(v==='plan'){if(view!=='plan')history.back();else render()}else{if(v==='pick')cm=new Date();if(view==='plan')history.pushState({v:v},'');view=v;render()}}
 function cmv(d){cm=new Date(cm.getFullYear(),cm.getMonth()+d,1);selD=null;render()}
 function renderCal(A){
- document.getElementById('sub').textContent='Kalender';
- const y=cm.getFullYear(),m=cm.getMonth(),f=(new Date(y,m,1).getDay()+6)%7,nd=new Date(y,m+1,0).getDate(),D=S.dates||{},pd=x=>String(x).padStart(2,'0');
+ const pick=view==='pick',td=ds();
+ document.getElementById('sub').textContent=pick?'Tag zum Speichern wählen':'Kalender';
+ const y=cm.getFullYear(),m=cm.getMonth(),f=(new Date(y,m,1).getDay()+6)%7,nd=new Date(y,m+1,0).getDate(),pd=x=>String(x).padStart(2,'0');
  let h='<div class="card"><div class="exh"><button class="x" onclick="cmv(-1)">‹</button><b style="flex:1;text-align:center">'+cm.toLocaleDateString('de-DE',{month:'long',year:'numeric'})+'</b><button class="x" onclick="cmv(1)">›</button></div><div class="cal" style="margin-top:10px">'+['Mo','Di','Mi','Do','Fr','Sa','So'].map(t=>'<div class="cnt">'+t+'</div>').join('')+'<div></div>'.repeat(f);
- for(let d=1;d<=nd;d++){const k=y+'-'+pd(m+1)+'-'+pd(d),t=D[k]!==undefined;h+='<div class="cd'+(t?' tr':'')+(k===selD?' sel':'')+(k===ds()?' td':'')+'"'+(t?' onclick="selD=\''+k+'\';render()"':'')+'>'+d+'</div>'}
+ for(let d=1;d<=nd;d++){const k=y+'-'+pd(m+1)+'-'+pd(d),t=ent(k)!==null;h+='<div class="cd'+(t?' tr':'')+(t&&k>td?' pl':'')+(k===selD?' sel':'')+(k===td?' td':'')+'"'+(pick?' onclick="pickD(\''+k+'\')"':t?' onclick="selD=\''+k+'\';render()"':'')+'>'+d+'</div>'}
  h+='</div></div>';
- if(selD&&D[selD]!==undefined){const di=D[selD],dy=S.days&&S.days[di],w=wk(new Date(selD+'T12:00:00'));h+='<div class="card"><b>'+esc(dy?dy.name:'Training')+'</b> · '+selD.split('-').reverse().join('.');
-  (dy?dy.ex:[]).forEach((x,ei)=>{[x,...((dy.alt&&dy.alt[ei])||[])].forEach((nm,v)=>{const r=sets(w,di,ei+(v?'.'+v:'')).filter(z=>z.kg||z.reps);if(r.length)h+='<div class="last"><b>'+esc(nm)+'</b><br>'+r.map((z,i)=>(i+1)+'. '+(z.kg||'?')+' kg × '+(z.reps||'?')).join(' · ')+'</div>'})});h+='</div>'}
- else h+='<div class="sub">Tippe auf einen markierten Tag.</div>';
+ const e=!pick&&selD&&ent(selD);
+ if(e){const di=e.d,dy=S.days&&S.days[di],w=e.w;h+='<div class="card"><b>'+esc(dy?dy.name:'Training')+'</b> · '+selD.split('-').reverse().join('.');
+  (dy?dy.ex:[]).forEach((x,ei)=>{[x,...((dy.alt&&dy.alt[ei])||[])].forEach((nm,v)=>{const r=sets(w,di,ei+(v?'.'+v:'')).filter(z=>z.kg||z.reps);if(r.length)h+='<div class="last"><b>'+(ei+1)+'. '+esc(nm)+'</b><br>'+r.map((z,i)=>(i+1)+'. '+(z.kg||'?')+' kg × '+(z.reps||'?')).join(' · ')+'</div>'})});h+='</div>'}
+ else h+='<div class="sub">'+(pick?'Tippe auf den Tag, an dem das Training gespeichert werden soll.':'Tippe auf einen markierten Tag.')+'</div>';
  A.innerHTML=h}
 function msV(e,k,f,v){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];a[k]=a[k]||{};a[k][f]=v;save()}
 function msAdd(e){const D=S.days[cur];D.ms=D.ms||{};const a=D.ms[e]=D.ms[e]||[];a.push({});save();render()}
 function msDel(e,k){S.days[cur].ms[e].splice(k,1);save();render()}
 function addSet(e){const L=S.logs;L[W]=L[W]||{};L[W][cur]=L[W][cur]||{};const a=L[W][cur][e]=L[W][cur][e]||[];const t=Math.max(1,a.length)+1;while(a.length<t){const pv=a[a.length-1];a.push(pv&&pv.kg?{kg:pv.kg}:{})}save();render()}
-function addEx(){const v=document.getElementById('ne').value.trim();if(!v)return;S.days[cur].ex.push(v);openEx=S.days[cur].ex.length-1;save();render()}
+function addEx(){const v=document.getElementById('ne').value.trim();if(!v)return;S.days[cur].ex.push(v);openEx=S.days[cur].ex.length-1;sc=1;save();render()}
 let dl=null;
 try{if(window.claude&&claude.use)claude.use('downloads').then(x=>{dl=x}).catch(()=>{})}catch(e){}
 const BK='<div class="row"><button class="ghost" onclick="exportData()">Plan herunterladen</button><button class="ghost" onclick="document.getElementById(\'imp\').click()">Plan importieren</button></div><input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">';
