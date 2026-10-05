@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Trainingsplan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Trainingslog</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8;--accent:#1e90ff;--accent2:#00c2ff}
@@ -36,11 +36,12 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 </style>
 </head>
 <body>
-<div class="hd"><div><h1>Trainingsplan</h1><div class="sub" id="sub"></div></div><div class="menu" id="menuw" style="display:none"><button class="ghost" onclick="tm(event)" aria-label="Menü">☰</button><div class="mn" id="mn" style="display:none"><button onclick="go('plan')">🏋 Training</button><button onclick="go('cal')">📅 Kalender</button><button onclick="exportData()">⬇ Plan herunterladen</button><button onclick="document.getElementById('imp').click()">⬆ Plan importieren</button><button onclick="reset()">🔄 Plan neu einrichten</button></div></div></div>
+<div class="hd"><div><h1>Trainingslog</h1><div class="sub" id="sub"></div></div><div class="menu" id="menuw" style="display:none"><button class="ghost" onclick="tm(event)" aria-label="Menü">☰</button><div class="mn" id="mn" style="display:none"><button onclick="go('plan')">🏋 Training</button><button onclick="go('cal')">📅 Kalender</button><button onclick="exportData()">⬇ Log herunterladen</button><button onclick="document.getElementById('imp').click()">⬆ Log importieren</button><button onclick="reset()">🔄 Plan neu einrichten</button></div></div></div>
 <input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">
-<div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Plan regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
+<div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Log regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
 <div id="app"></div>
 <div id="toast"></div>
+<div id="leave" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;align-items:center;justify-content:center"><div class="card" style="width:min(90%,340px);margin:0"><b>Seite wirklich verlassen?</b><div class="row"><button style="flex:1" onclick="leaveYes()">Ja</button><button class="ghost" style="flex:1" onclick="leaveNo()">Nein</button></div></div></div>
 <script>
 const PASSWORT='Training2026'; // <- hier dein Passwort ändern
 const KEY='trainingsplan_v1';
@@ -92,8 +93,32 @@ function ent(k){const v=(S.dates||{})[k];if(v===undefined||v===null)return null;
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>{e.style.display='none'},2200)}
 function saveDate(k){S.dates=S.dates||{};Object.keys(S.dates).forEach(x=>{const e=ent(x);if(x!==k&&e&&e.d===cur&&e.w===W)delete S.dates[x]});S.dates[k]={d:cur,w:W};save();svOpen=false;toast(k===ds()?'Für heute gespeichert ✓':'Gespeichert am '+k.split('-').reverse().join('.')+' ✓');render()}
 function pickD(k){const e=ent(k);if(e&&!(e.d===cur&&e.w===W)&&!confirm('Für diesen Tag ist schon ein Training gespeichert. Ersetzen?'))return;saveDate(k);go('plan')}
-function fx(ev){setTimeout(()=>{const o=document.querySelector('.card.open'),i=ev.target;if(!o||!i||!i.getBoundingClientRect)return;const vh=window.visualViewport?visualViewport.height:innerHeight,t=o.getBoundingClientRect().top+scrollY-10,ib=i.getBoundingClientRect().bottom+scrollY+16;scrollTo(0,Math.max(0,Math.max(t,ib-vh)))},350)}
-window.addEventListener('popstate',e=>{view=(e.state&&e.state.v)||'plan';openEx=null;render()})
+function fx(ev){const i=ev.target;[150,450,900].forEach(ms=>setTimeout(()=>{
+ const o=document.querySelector('.card.open');if(!o||!i.getBoundingClientRect||document.activeElement!==i)return;
+ const vv=window.visualViewport,top=vv?vv.offsetTop:0,h=vv?vv.height:innerHeight,r=i.getBoundingClientRect(),c=o.getBoundingClientRect().top;
+ let d=0;
+ if(r.bottom>top+h-24)d=r.bottom-(top+h-24);
+ else if(r.top<top+8)d=r.top-top-8;
+ else if(c<top+4&&r.bottom-c<h-24)d=c-top-6;
+ if(d)scrollBy(0,d)},ms))}
+function askLeave(){document.getElementById('leave').style.display='flex';history.pushState({g:'app'},'')}
+function leaveYes(){document.getElementById('leave').style.display='none';const g=history.state&&history.state.g;if(g==='root')history.back();else history.go(-2)}
+function leaveNo(){document.getElementById('leave').style.display='none';if(history.state&&history.state.g==='root')history.pushState({g:'app'},'')}
+window.addEventListener('popstate',e=>{
+ const g=e.state&&e.state.g;
+ if(g==='cal'||g==='pick'){view=g;openEx=null;render();return}
+ const rt=g==='root'||!g;
+ if(view!=='plan'){view='plan';openEx=null;render();if(rt)history.pushState({g:'app'},'');return}
+ if(!rt)return;
+ if(document.getElementById('leave').style.display==='flex')return;
+ const a=document.activeElement;
+ if(a&&a.tagName==='INPUT'){a.blur();history.pushState({g:'app'},'');return}
+ if(openEx!==null){openEx=null;render();history.pushState({g:'app'},'');return}
+ askLeave()});
+{const g=history.state&&history.state.g;if(g==='root')history.pushState({g:'app'},'');else if(g==='cal'||g==='pick')history.replaceState({g:'app'},'');else if(g!=='app'){history.replaceState({g:'root'},'');history.pushState({g:'app'},'')}}
+if(window.visualViewport){let base=visualViewport.height,kb=false;
+ addEventListener('orientationchange',()=>setTimeout(()=>{base=visualViewport.height},600));
+ visualViewport.addEventListener('resize',()=>{if(visualViewport.height<base*0.8)kb=true;else if(kb){kb=false;const a=document.activeElement;if(a&&a.tagName==='INPUT')a.blur()}})}
 function sw(ev,n){const t=ev.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;vr=Math.max(0,Math.min(n-1,vr+(dx<0?1:-1)));render()}
 function setName(ei,v,val){if(v==0)S.days[cur].ex[ei]=val;else S.days[cur].alt[ei][v-1]=val;save()}
 function addAlt(ei){const D=S.days[cur];D.alt=D.alt||{};const a=D.alt[ei]=D.alt[ei]||[];a.push('Alternative '+(a.length+1));vr=a.length;save();render()}
@@ -102,7 +127,7 @@ function delAlt(ei,v){if(!confirm('Alternative wirklich löschen?'))return;const
  D.ms=fx(D.ms);Object.values(S.logs).forEach(w=>{if(w[cur])w[cur]=fx(w[cur])});vr=Math.max(0,v-1);save();render()}
 function tm(e){e.stopPropagation();const m=document.getElementById('mn');m.style.display=m.style.display==='block'?'none':'block'}
 document.addEventListener('click',()=>{document.getElementById('mn').style.display='none'});
-function go(v){openEx=null;if(v==='plan'){if(view!=='plan')history.back();else render()}else{if(v==='pick')cm=new Date();if(view==='plan')history.pushState({v:v},'');view=v;render()}}
+function go(v){openEx=null;if(v==='plan'){if(view!=='plan')history.back();else render()}else{if(v==='pick')cm=new Date();if(view==='plan')history.pushState({g:v},'');view=v;render()}}
 function cmv(d){cm=new Date(cm.getFullYear(),cm.getMonth()+d,1);selD=null;render()}
 function renderCal(A){
  const pick=view==='pick',td=ds();
@@ -125,7 +150,7 @@ let dl=null;
 try{if(window.claude&&claude.use)claude.use('downloads').then(x=>{dl=x}).catch(()=>{})}catch(e){}
 const BK='<div class="row"><button class="ghost" onclick="exportData()">Plan herunterladen</button><button class="ghost" onclick="document.getElementById(\'imp\').click()">Plan importieren</button></div><input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">';
 async function exportData(){
- const txt=JSON.stringify(S,null,1),name='trainingsplan-'+new Date().toISOString().slice(0,10)+'.json';
+ const txt=JSON.stringify(S,null,1),name='trainingslog-'+new Date().toISOString().slice(0,10)+'.json';
  if(dl){try{await dl.save({filename:name,data:txt})}catch(e){if(!e||e.code!=='declined')alert('Speichern hat nicht geklappt.')}return}
  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove()}catch(e){alert('Speichern hat nicht geklappt.')}
 }
@@ -134,7 +159,7 @@ async function importData(inp){
  try{
   const o=JSON.parse(await f.text());
   if(!o||typeof o.logs!=='object'||!(o.days===null||Array.isArray(o.days)))throw 0;
-  if(!confirm('Aktuellen Plan durch die Datei ersetzen?')){inp.value='';return}
+  if(!confirm('Aktuellen Log durch die Datei ersetzen?')){inp.value='';return}
   S=o;(S.days||[]).forEach(d=>{Object.values(d.ms||{}).forEach(a=>{while(a.length&&!a[a.length-1].n&&!a[a.length-1].v)a.pop()})});
   cur=0;openEx=null;view='plan';inp.value='';save();render();
  }catch(e){alert('Die Datei konnte nicht gelesen werden. Bitte eine zuvor heruntergeladene Plan-Datei wählen.');inp.value=''}
