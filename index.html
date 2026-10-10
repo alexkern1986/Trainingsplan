@@ -6,7 +6,7 @@
 <title>Trainingslog</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8;--accent:#1e90ff;--accent2:#00c2ff}
+--bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8;--accent:#1e90ff;--accent2:#00c2ff;--on:#fff}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef4ff;--card:#fff;--line:#c9d9f2;--text:#0a1a33;--mute:#4d6a94}}
 :root[data-theme="dark"]{--bg:#0a1424;--card:#12213a;--line:#1f3559;--text:#eaf2ff;--mute:#8aa4c8}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -17,11 +17,11 @@ h1{font-size:24px;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px;fon
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 input{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px;width:100%}
 input:focus{outline:2px solid var(--accent)}
-button{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer}
+button{background:linear-gradient(90deg,var(--accent),var(--accent2));color:var(--on);border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer}
 button.ghost{background:transparent;border:1px solid var(--line);color:var(--mute);font-weight:600}
 .tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px}
 .tab{flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--mute)}
-.tab.on{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border-color:transparent}
+.tab.on{background:linear-gradient(90deg,var(--accent),var(--accent2));color:var(--on);border-color:transparent}
 .row{display:flex;gap:8px;align-items:center;margin-top:8px}
 .row span{color:var(--mute);width:24px;font-size:13px}
 .last{color:var(--accent2);font-size:13px;margin:4px 0}
@@ -29,14 +29,15 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--mut
 .u{position:relative;flex:1}.u input{padding-right:46px}.u em{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--mute);font-style:normal;font-size:14px;pointer-events:none}
 .acc{cursor:pointer}.cnt{color:var(--mute);font-size:13px}.open{border-color:var(--accent)}
 .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.menu{position:relative}.mn{position:absolute;right:0;top:46px;background:var(--card);border:1px solid var(--line);border-radius:12px;min-width:220px;z-index:5;padding:6px}.mn button{display:block;width:100%;text-align:left;background:none;color:var(--text);text-transform:none;letter-spacing:0;font-weight:600}
-.dots{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.dots span{flex:0 0 auto;padding:6px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;color:var(--mute);cursor:pointer}.dots span.on{background:var(--accent);color:#fff;border-color:transparent}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.cd{padding:10px 0;border-radius:10px;font-size:15px;color:var(--mute)}.cd.tr{background:var(--accent);color:#fff;font-weight:700;cursor:pointer}.cd.sel{outline:2px solid var(--accent2)}.cd.td{border:1px solid var(--accent2)}.tabs{position:relative}
-#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9}.cd{cursor:pointer}.cd.pl{background:transparent;color:var(--accent2);border:1px dashed var(--accent2)}
+.dots{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.dots span{flex:0 0 auto;padding:6px 12px;border:1px solid var(--line);border-radius:20px;font-size:13px;color:var(--mute);cursor:pointer}.dots span.on{background:var(--accent);color:var(--on);border-color:transparent}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}.cd{padding:10px 0;border-radius:10px;font-size:15px;color:var(--mute)}.cd.tr{background:var(--accent);color:var(--on);font-weight:700;cursor:pointer}.cd.sel{outline:2px solid var(--accent2)}.cd.td{border:1px solid var(--accent2)}.tabs{position:relative}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:var(--on);padding:10px 16px;border-radius:20px;display:none;z-index:9}.cd{cursor:pointer}.cd.pl{background:transparent;color:var(--accent2);border:1px dashed var(--accent2)}
+.cols{display:flex;gap:12px;padding:10px 12px 6px}.cols span{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);cursor:pointer}
 .x{background:transparent;color:var(--mute);padding:6px 10px;border:1px solid var(--line)}
 </style>
 </head>
 <body>
-<div class="hd"><div><h1>Trainingslog</h1><div class="sub" id="sub"></div></div><div class="menu" id="menuw" style="display:none"><button class="ghost" onclick="tm(event)" aria-label="Menü">☰</button><div class="mn" id="mn" style="display:none"><button onclick="go('plan')">🏋 Training</button><button onclick="go('cal')">📅 Kalender</button><button onclick="exportData()">⬇ Log herunterladen</button><button onclick="document.getElementById('imp').click()">⬆ Log importieren</button><button onclick="reset()">🔄 Plan neu einrichten</button></div></div></div>
+<div class="hd"><div><h1>Trainingslog</h1><div class="sub" id="sub"></div></div><div class="menu" id="menuw" style="display:none"><button class="ghost" onclick="tm(event)" aria-label="Menü">☰</button><div class="mn" id="mn" style="display:none"><button onclick="go('plan')">🏋 Training</button><button onclick="go('cal')">📅 Kalender</button><button onclick="exportData()">⬇ Log herunterladen</button><button onclick="document.getElementById('imp').click()">⬆ Log importieren</button><button onclick="reset()">🔄 Log einrichten</button><div class="cols" id="cols"></div></div></div></div>
 <input id="imp" type="file" accept=".json,.txt,application/json,text/plain" style="display:none" onchange="importData(this)">
 <div id="warn" class="card" style="display:none;border-color:#ff9f1c">⚠ Speichern im Browser funktioniert hier nicht. Bitte den Log regelmäßig herunterladen oder die Seite über einen normalen Link öffnen.</div>
 <div id="app"></div>
@@ -70,7 +71,7 @@ function render(){
  h+='<div class="card"><input value="'+esc(D.name)+'" oninput="S.days[cur].name=this.value;save()" onchange="render()" aria-label="Name des Trainingstags"></div>';
  D.ex.forEach((x,ei)=>{
   const al=(D.alt&&D.alt[ei])||[],names=[x,...al],kk=v=>ei+(v?'.'+v:'');
-  if(openEx!==ei){const c=names.reduce((t,_,v)=>t+sets(W,cur,kk(v)).filter(s=>s.kg||s.reps).length,0);h+='<div class="card acc" onclick="openEx='+ei+';vr=0;sc=1;render()"><div class="exh"><b style="flex:1">'+(ei+1)+'. '+esc(x||'Übung')+'</b><span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
+  if(openEx!==ei){const c=names.reduce((t,_,v)=>t+sets(W,cur,kk(v)).filter(s=>s.kg||s.reps).length,0);h+='<div class="card acc" onclick="openEx='+ei+';vr=0;sc=1;render()"><div class="exh"><b style="flex:1">'+(ei+1)+'. '+esc(x||'Übung')+'</b>'+(al.length?'<span class="cnt" style="color:var(--accent2)">⇄ '+al.length+' Alt.</span>':'')+'<span class="cnt">'+(c?c+' Sätze ✓':'')+'</span><span class="cnt">▾</span></div></div>';return}
   const v=Math.min(vr,names.length-1),K=kk(v),q="'"+K+"'",cs=sets(W,cur,K),L=last(cur,K),n=Math.max(cs.length,1),m=(D.ms&&D.ms[K])||[];
   h+='<div class="card open" ontouchstart="tx=event.touches[0].clientX;ty=event.touches[0].clientY" ontouchend="sw(event,'+names.length+')" onfocusin="fx(event)">';
   h+='<div class="exh"><span class="cnt">'+(ei+1)+'.</span><input value="'+esc(names[v])+'" oninput="setName('+ei+','+v+',this.value)" style="font-weight:700"><button class="x" onclick="openEx=null;render()">▴</button></div>';
@@ -79,6 +80,7 @@ function render(){
   m.forEach((z,k)=>{h+='<div class="row"><input placeholder="Einstellung" value="'+esc(z.n||'')+'" oninput="msV('+q+','+k+',\'n\',this.value)"><input placeholder="Wert" value="'+esc(z.v||'')+'" oninput="msV('+q+','+k+',\'v\',this.value)" style="max-width:32%"><button class="x" onclick="msDel('+q+','+k+')">✕</button></div>'});
   h+='<div class="row"><button class="ghost" onclick="msAdd('+q+')">+ Maschineneinstellung</button></div>';
   h+='<div class="last" style="margin-top:12px">'+(L?'Letztes Mal ('+L.w+'): '+L.s.filter(s=>s.kg||s.reps).map(s=>(s.kg||'?')+' kg × '+(s.reps||'?')).join(' · '):'Noch keine Vorwerte')+'</div>';
+  if(L)h+='<div class="row"><button class="ghost" onclick="takeLast('+q+')">Letztes Mal übernehmen</button></div>';
   for(let si=0;si<n;si++){const c=cs[si]||{},p=L&&L.s[si]||{};
    h+='<div class="row"><span>'+(si+1)+'.</span><div class="u"><input type="number" inputmode="decimal" placeholder="'+(p.kg||'0')+'" value="'+esc(c.kg||'')+'" oninput="setV('+q+','+si+',\'kg\',this.value)"><em>kg</em></div><div class="u"><input type="number" inputmode="numeric" placeholder="'+(p.reps||'0')+'" value="'+esc(c.reps||'')+'" oninput="setV('+q+','+si+',\'reps\',this.value)"><em>Wdh</em></div>'+(n>1?'<button class="x" onclick="delSet('+q+','+si+')">✕</button>':'')+'</div>'}
   h+='<div class="row"><button class="ghost" onclick="addSet('+q+')">+ Satz</button><button class="ghost" onclick="'+(v?'delAlt('+ei+','+v+')':'delEx('+ei+')')+'">'+(v?'Alternative löschen':'Übung löschen')+'</button></div></div>'});
@@ -91,7 +93,9 @@ function unlock(){if(document.getElementById('pw').value===PASSWORT){ok=true;try
 function ds(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function ent(k){const v=(S.dates||{})[k];if(v===undefined||v===null)return null;return typeof v==='object'?v:{d:v,w:wk(new Date(k+'T12:00:00'))}}
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>{e.style.display='none'},2200)}
-function saveDate(k){S.dates=S.dates||{};Object.keys(S.dates).forEach(x=>{const e=ent(x);if(x!==k&&e&&e.d===cur&&e.w===W)delete S.dates[x]});S.dates[k]={d:cur,w:W};save();svOpen=false;toast(k===ds()?'Für heute gespeichert ✓':'Gespeichert am '+k.split('-').reverse().join('.')+' ✓');render()}
+function fillDay(){const D=S.days&&S.days[cur];if(!D)return;D.ex.forEach((x,ei)=>{[x,...((D.alt&&D.alt[ei])||[])].forEach((_,v)=>{const K=ei+(v?'.'+v:''),a=sets(W,cur,K),L=last(cur,K);if(!L)return;a.forEach((z,i)=>{const p=L.s[i];if(!p||!z)return;if(z.reps&&!z.kg&&p.kg)z.kg=p.kg;if(z.kg&&!z.reps&&p.reps)z.reps=p.reps})})})}
+function takeLast(K){const L=last(cur,K);if(!L)return;const g=S.logs;g[W]=g[W]||{};g[W][cur]=g[W][cur]||{};const a=g[W][cur][K]=g[W][cur][K]||[];L.s.forEach((p,i)=>{a[i]=a[i]||{};if(!a[i].kg&&p.kg)a[i].kg=p.kg;if(!a[i].reps&&p.reps)a[i].reps=p.reps});save();render()}
+function saveDate(k){fillDay();S.dates=S.dates||{};Object.keys(S.dates).forEach(x=>{const e=ent(x);if(x!==k&&e&&e.d===cur&&e.w===W)delete S.dates[x]});S.dates[k]={d:cur,w:W};save();svOpen=false;toast(k===ds()?'Für heute gespeichert ✓':'Gespeichert am '+k.split('-').reverse().join('.')+' ✓');render()}
 function pickD(k){const e=ent(k);if(e&&!(e.d===cur&&e.w===W)&&!confirm('Für diesen Tag ist schon ein Training gespeichert. Ersetzen?'))return;saveDate(k);go('plan')}
 function fx(ev){const i=ev.target;[150,450,900].forEach(ms=>setTimeout(()=>{
  const o=document.querySelector('.card.open');if(!o||!i.getBoundingClientRect||document.activeElement!==i)return;
@@ -171,6 +175,10 @@ function delEx(i){if(!confirm('Übung löschen?'))return;const D=S.days[cur];D.e
 function reset(){if(!confirm('Plan und alle Eingaben löschen?'))return;S={days:null,logs:{}};view='plan';save();render()}
 try{localStorage.setItem(KEY+'_t','1');localStorage.removeItem(KEY+'_t')}catch(e){showWarn()}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+const TH={blau:['#1e90ff','#00c2ff','#fff'],pink:['#e91e8c','#ff7ab8','#fff'],gruen:['#16a34a','#4ade80','#fff'],rot:['#e53935','#ff7a70','#fff'],gelb:['#facc15','#ffe14d','#1a1400']};
+function setTheme(n,sv){const t=TH[n]||TH.blau,r=document.documentElement.style;r.setProperty('--accent',t[0]);r.setProperty('--accent2',t[1]);r.setProperty('--on',t[2]);if(sv){try{localStorage.setItem(KEY+'_theme',n)}catch(e){}}}
+document.getElementById('cols').innerHTML=Object.keys(TH).map(n=>'<span title="'+n+'" onclick="setTheme(\''+n+'\',1)" style="background:'+TH[n][0]+'"></span>').join('');
+{let th='blau';try{th=localStorage.getItem(KEY+'_theme')||'blau'}catch(e){}setTheme(th)}
 render();
 </script>
 </body>
